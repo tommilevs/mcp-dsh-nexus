@@ -1,0 +1,38 @@
+{
+  "name": "@tommilevs/dsh-control-mcp-stdio",
+  "version": "0.1.0",
+  "description": "stdio adapter for the authenticated DSH Control MCP HTTP endpoint",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "lib/cli.js",
+  "types": "lib/cli.d.ts",
+  "bin": {
+    "dsh-control-mcp-stdio": "./lib/cli.js"
+  },
+  "files": [
+    "lib",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc --strict --skipLibCheck --module NodeNext --moduleResolution NodeNext --target ES2022 --declaration --outDir lib --rootDir src src/cli.ts && node -e \"require('node:fs').chmodSync('lib/cli.js', 0o755)\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "2.1.0",
+    "@modelcontextprotocol/server": "2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.8",
+    "typescript": "5.9.3"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tommilevs/mcp-dsh-nexus.git"
+  },
+  "homepage": "https://github.com/tommilevs/mcp-dsh-nexus#readme",
+  "bugs": {
+    "url": "https://github.com/tommilevs/mcp-dsh-nexus/issues"
+  }
+}

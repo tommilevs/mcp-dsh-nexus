@@ -1,0 +1,35 @@
+{
+  "name": "dsh-control-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.18.3",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "test": "vitest run --project unit",
+    "test:e2e": "vitest run --project e2e --passWithNoTests",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check packages/*/src packages/*/tests",
+    "build": "pnpm -r build",
+    "pretest": "pnpm --filter @tommilevs/dsh-control-mcp-host build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.2.5",
+    "@types/node": "22.18.8",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4",
+    "yaml": "2.8.1",
+    "esbuild": "0.28.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tommilevs/mcp-dsh-nexus.git"
+  },
+  "homepage": "https://github.com/tommilevs/mcp-dsh-nexus#readme",
+  "bugs": {
+    "url": "https://github.com/tommilevs/mcp-dsh-nexus/issues"
+  }
+}

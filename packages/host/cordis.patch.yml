@@ -1,0 +1,6 @@
+- insert:
+    - id: dsh-control-mcp-host
+      name: '@tommilevs/dsh-control-mcp-host'
+      inject: [webServer, credentials, sessionController, workspaceController]
+    - id: dsh-control-mcp-client
+      name: '@tommilevs/dsh-control-mcp-client'

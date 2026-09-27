@@ -1,0 +1,86 @@
+{
+  "name": "@tommilevs/dsh-control-mcp-host",
+  "version": "0.1.0",
+  "description": "Scoped local MCP control for DeepSeek Harness",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./typert": {
+      "types": "./lib/typert.host.d.ts",
+      "default": "./lib/typert.host.js"
+    },
+    "./remote": {
+      "types": "./lib/typert.remote-client.d.ts",
+      "default": "./lib/typert.remote-client.js"
+    },
+    "./types": {
+      "types": "./lib/types.d.ts",
+      "default": "./lib/types.js"
+    }
+  },
+  "files": [
+    "lib/typert.host.js",
+    "lib/typert.host.d.ts",
+    "lib/typert.remote-client.js",
+    "lib/typert.remote-client.d.ts",
+    "lib/typert.remote-client.d.ts.map",
+    "lib/**/*.js",
+    "lib/**/*.d.ts",
+    "!lib/.typert-check/**",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "build:lib": "node scripts/generate-typert.mjs",
+    "build": "pnpm run build:lib && tsc --strict --skipLibCheck --module NodeNext --moduleResolution NodeNext --target ES2022 --declaration --outDir lib --rootDir src src/index.ts src/token-controller.ts src/types.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/node": "2.1.0",
+    "@modelcontextprotocol/server": "2.1.0",
+    "hono": "4.11.4",
+    "zod": "4.4.3"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.4",
+    "@deepseek-ai/dsh-api-session-controller": ">=0.1.7-rc.1 <0.1.8",
+    "@deepseek-ai/dsh-api-workspace-controller": ">=0.1.7-rc.1 <0.1.8",
+    "@deepseek-ai/dsh-credentials": ">=0.1.7-rc.1 <0.1.8",
+    "@deepseek-ai/dsh-host-webserver": ">=0.1.7-rc.1 <0.1.8",
+    "@deepseek-ai/dsh-typert-protocol": ">=0.1.7-rc.1 <0.1.8"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.0.4",
+    "@deepseek-ai/dsh-api-gateway": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-api-session-controller": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-api-workspace-controller": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-client-connection": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-credentials": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-host-webserver": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-typert-generator": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-typert-registry": "0.1.7-rc.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tommilevs/mcp-dsh-nexus.git"
+  },
+  "homepage": "https://github.com/tommilevs/mcp-dsh-nexus#readme",
+  "bugs": {
+    "url": "https://github.com/tommilevs/mcp-dsh-nexus/issues"
+  }
+}
