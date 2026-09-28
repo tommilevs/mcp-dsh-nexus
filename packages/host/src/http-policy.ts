@@ -1,19 +1,42 @@
 import type { IncomingMessage } from "node:http";
 import type { TokenPrincipal } from "./index.js";
+import { isLoopbackIPv4, isPrivateIPv4 } from "./listener-config.js";
 import type { RequestLimiter } from "./rate-limiter.js";
 export const MAX_BODY_BYTES = 64 * 1024;
 export function assertBodySize(size: number): void {
 	if (!Number.isSafeInteger(size) || size < 0 || size > MAX_BODY_BYTES)
 		throw new Error("Request body too large");
 }
-export function assertHttpPolicy(req: IncomingMessage, port: number): void {
+export interface HttpAccessPolicy {
+	bindAddress: string;
+	requireBearer: boolean;
+}
+
+function normalizedPeer(req: IncomingMessage): string {
+	const peer = req.socket.remoteAddress ?? "";
+	return peer.startsWith("::ffff:") ? peer.slice(7) : peer;
+}
+
+export function assertHttpPolicy(
+	req: IncomingMessage,
+	port: number,
+	access: HttpAccessPolicy = { bindAddress: "127.0.0.1", requireBearer: true },
+): void {
+	const peer = normalizedPeer(req);
+	const localBind = isLoopbackIPv4(access.bindAddress);
 	if (
-		!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(
-			req.socket.remoteAddress ?? "",
-		)
+		localBind ? !isLoopbackIPv4(peer) && peer !== "::1" : !isPrivateIPv4(peer)
 	)
 		throw new Error("Forbidden");
-	const hosts = [`127.0.0.1:${port}`, `localhost:${port}`];
+	const hosts = localBind
+		? [
+				...new Set([
+					`${access.bindAddress}:${port}`,
+					`127.0.0.1:${port}`,
+					`localhost:${port}`,
+				]),
+			]
+		: [`${access.bindAddress}:${port}`];
 	if (typeof req.headers.host !== "string" || !hosts.includes(req.headers.host))
 		throw new Error("Forbidden");
 	if (
@@ -49,14 +72,20 @@ export function assertHttpPolicy(req: IncomingMessage, port: number): void {
 export async function admitRequest(
 	req: IncomingMessage,
 	port: number,
-	auth: { resolvePrincipal(req: IncomingMessage): Promise<TokenPrincipal> },
+	auth: {
+		resolvePrincipal(
+			req: IncomingMessage,
+			requireBearer?: boolean,
+		): Promise<TokenPrincipal>;
+	},
 	limiter: RequestLimiter,
+	access: HttpAccessPolicy = { bindAddress: "127.0.0.1", requireBearer: true },
 ): Promise<TokenPrincipal> {
-	assertHttpPolicy(req, port);
+	assertHttpPolicy(req, port, access);
 	const release = limiter.reserveUnauthenticated();
 	let principal: TokenPrincipal;
 	try {
-		principal = await auth.resolvePrincipal(req);
+		principal = await auth.resolvePrincipal(req, access.requireBearer);
 	} finally {
 		release();
 	}

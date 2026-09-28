@@ -26,10 +26,19 @@ const sessionTools = new Set([
 	"dsh_wait_run",
 	"dsh_cancel_run",
 ]);
+const localNoBearerPrincipal: TokenPrincipal = {
+	id: "local-no-bearer",
+	scopes: Object.values(toolScopes) as TokenScope[],
+	allowedSessionIds: "*",
+};
 export class AuthService {
 	constructor(private readonly store: TokenStore) {}
-	async resolvePrincipal(req: IncomingMessage): Promise<TokenPrincipal> {
+	async resolvePrincipal(
+		req: IncomingMessage,
+		requireBearer = true,
+	): Promise<TokenPrincipal> {
 		const header = req.headers.authorization;
+		if (header === undefined && !requireBearer) return localNoBearerPrincipal;
 		if (typeof header !== "string" || !/^Bearer \S+$/.test(header))
 			throw new Error("Unauthorized");
 		if (
@@ -46,6 +55,10 @@ export class AuthService {
 		toolName: string,
 		targetSessionId?: string,
 	): Promise<void> {
+		if (principal.id === localNoBearerPrincipal.id) {
+			if (!toolScopes[toolName]) throw new Error("Forbidden");
+			return;
+		}
 		const current = await this.store.getPrincipal(principal.id);
 		const scope = toolScopes[toolName];
 		if (!scope || !current.scopes.includes(scope)) throw new Error("Forbidden");

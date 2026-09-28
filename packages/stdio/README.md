@@ -2,7 +2,7 @@
 
 This optional adapter gives stdio-only MCP clients access to the same scoped tools exposed by the DSH Host's authenticated Streamable HTTP endpoint. It starts no listener of its own: each adapter process creates one authenticated HTTP MCP session to the running DSH Host and forwards `tools/list` and `tools/call` over its stdio connection. Image content is passed through as MCP content blocks.
 
-Set `DSH_CONTROL_MCP_URL` to `http://127.0.0.1:<port>/api/dsh-control-mcp/mcp` using the local port shown by DSH Desktop for its web interface. After connection, `dsh_status` also reports this port. The port can differ between DSH builds, so the adapter requires this setting instead of guessing. Only loopback HTTP URLs with the exact MCP path are accepted. The bearer credential must be provided as `DSH_CONTROL_MCP_TOKEN`; it is sent only in the HTTP `Authorization` header. Do not put it in command arguments, endpoint URLs, or a checked-in configuration file.
+Set `DSH_CONTROL_MCP_URL` to `http://127.0.0.1:<port>/api/dsh-control-mcp/mcp` using the dedicated listener URL shown in the DSH MCP settings panel. The adapter requires an explicit URL instead of guessing. Only loopback HTTP URLs with the exact MCP path are accepted; use a native Streamable HTTP MCP client for the dedicated LAN endpoint. The bearer credential must be provided as `DSH_CONTROL_MCP_TOKEN`; it is sent only in the HTTP `Authorization` header. Do not put it in command arguments, endpoint URLs, or a checked-in configuration file.
 
 Build from this repository with:
 
@@ -51,6 +51,6 @@ env_vars = ["DSH_CONTROL_MCP_TOKEN", "DSH_CONTROL_MCP_URL"]
 ## Security and lifecycle
 
 - The adapter requires a non-empty `DSH_CONTROL_MCP_TOKEN` and never prints configuration or upstream transport errors that might contain credentials.
-- `DSH_CONTROL_MCP_URL` cannot include credentials, query parameters, or fragments, and cannot target a non-loopback host.
+- `DSH_CONTROL_MCP_URL` cannot include credentials, query parameters, or fragments, and cannot target a non-loopback host. This stdio restriction is intentional and does not apply to native HTTP MCP clients using the dedicated listener.
 - Closing stdio or sending SIGINT/SIGTERM closes the SDK transports so the authenticated HTTP session is released.
 - The HTTP Host remains authoritative for token scopes and tool permissions. The adapter does not broaden the upstream tool list or provide an alternate authentication path.

@@ -6,6 +6,8 @@ import type {
 import type { WebServer } from "@deepseek-ai/dsh-host-webserver";
 import { Remote, TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
 import type { TokenScope } from "./index.js";
+import type { ListenerPreferences } from "./listener-config.js";
+import type { ListenerStatus } from "./listener-contract.js";
 import {
 	type IssuedToken,
 	type TokenMetadata,
@@ -162,7 +164,7 @@ type TokenControllerContext = Context & {
  * @typert service tokenManagementController
  */
 export class ClientTokenController extends TypertRemoteService {
-	static inject = ["credentials", "webServer"];
+	static inject = ["credentials", "webServer", "dshControlMcpListener"];
 	private readonly api: TokenControllerApi;
 
 	constructor(ctx: TokenControllerContext) {
@@ -183,5 +185,20 @@ export class ClientTokenController extends TypertRemoteService {
 	@Remote
 	revokeClientToken(id: string): Promise<{ revoked: true }> {
 		return this.api.revokeClientToken(id);
+	}
+
+	@Remote
+	getListenerPreferences(): Promise<ListenerPreferences> {
+		return this.ctx.dshControlMcpListener.getPreferences();
+	}
+
+	@Remote
+	setListenerPreferences(input: ListenerPreferences): Promise<ListenerStatus> {
+		return this.ctx.dshControlMcpListener.setPreferences(input);
+	}
+
+	@Remote
+	getListenerStatus(): ListenerStatus {
+		return this.ctx.dshControlMcpListener.getStatus();
 	}
 }

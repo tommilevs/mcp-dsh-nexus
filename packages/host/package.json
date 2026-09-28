@@ -1,6 +1,6 @@
 {
   "name": "@tommilevs/dsh-control-mcp-host",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Scoped local MCP control for DeepSeek Harness",
   "type": "module",
   "engines": {

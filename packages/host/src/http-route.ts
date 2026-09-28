@@ -1,7 +1,11 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import { McpServer } from "@modelcontextprotocol/server";
-import { admitRequest, MAX_BODY_BYTES } from "./http-policy.js";
+import {
+	admitRequest,
+	type HttpAccessPolicy,
+	MAX_BODY_BYTES,
+} from "./http-policy.js";
 import type { TokenPrincipal } from "./index.js";
 import {
 	McpSessionRegistry,
@@ -12,7 +16,13 @@ import { RequestLimiter } from "./rate-limiter.js";
 export const MCP_PATH = "/api/dsh-control-mcp/mcp";
 export interface HttpRouteOptions {
 	port: () => number;
-	auth: { resolvePrincipal(req: IncomingMessage): Promise<TokenPrincipal> };
+	auth: {
+		resolvePrincipal(
+			req: IncomingMessage,
+			requireBearer?: boolean,
+		): Promise<TokenPrincipal>;
+	};
+	access?: HttpAccessPolicy;
 	registerTools?: (server: McpServer, principal: TokenPrincipal) => void;
 	limiter?: RequestLimiter;
 	/** Tests may shorten, but never increase, the 30-second production deadline. */
@@ -175,6 +185,7 @@ export function createHttpRoute(options: HttpRouteOptions) {
 				options.port(),
 				options.auth,
 				limiter,
+				options.access,
 			);
 			if (!["POST", "GET", "DELETE"].includes(req.method ?? "")) {
 				respond(res, 405, req);

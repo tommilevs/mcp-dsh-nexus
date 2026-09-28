@@ -1,14 +1,26 @@
 import type { Context } from "@deepseek-ai/cordis";
 import type {} from "@deepseek-ai/dsh-api-remotes/client";
+import type {} from "@tommilevs/dsh-control-mcp-host/remote";
 import type {
 	CreateClientTokenInput,
+	ListenerPreferences,
+	ListenerStatus,
 	TokenMetadata,
 	TokenScope,
-} from "@tommilevs/dsh-control-mcp-host";
-import type {} from "@tommilevs/dsh-control-mcp-host/remote";
+} from "@tommilevs/dsh-control-mcp-host/types";
 import React, { useEffect, useId, useState } from "react";
 
-export type TokenSectionRemote = Context["remote"]["clientTokens"];
+type ClientTokensRemote = Context["remote"]["clientTokens"];
+export type TokenSectionRemote = Pick<
+	ClientTokensRemote,
+	"listTokenMetadata" | "createClientToken" | "revokeClientToken"
+> &
+	Partial<
+		Pick<
+			ClientTokensRemote,
+			"getListenerPreferences" | "getListenerStatus" | "setListenerPreferences"
+		>
+	>;
 
 export interface TokenSectionProps {
 	remote: TokenSectionRemote;
@@ -33,6 +45,22 @@ const messages = {
 		english: "English",
 		russian: "Русский",
 		title: "MCP clients",
+		listener: "HTTP listener",
+		listenerEnabled: "Enable dedicated MCP listener",
+		bindAddress: "Listen on this address",
+		port: "Port",
+		requireBearer: "Require bearer token",
+		localOnlyHint:
+			"Without a bearer token, the listener is restricted to this computer.",
+		httpWarning:
+			"LAN access uses plain HTTP. Other devices on the network may be able to read the token and traffic. Use only on a trusted private network and do not forward this port from your router.",
+		listenerUrl: "MCP URL",
+		listenerStopped: "Listener is disabled.",
+		listenerError:
+			"Listener could not use the requested address or port. It fell back to authenticated localhost when possible.",
+		listenerSave: "Save listener settings",
+		listenerSaveError: "Could not save listener settings.",
+		listenerUnsupported: "Update the DSH Host plugin to manage this listener.",
 		trust:
 			"DSH treats authenticated local API callers as one shared operator. Any local authenticated DSH API process has the same authority. New tokens can access only sessions they create.",
 		clientName: "Client name",
@@ -61,6 +89,22 @@ const messages = {
 		english: "English",
 		russian: "Русский",
 		title: "Клиенты MCP",
+		listener: "HTTP-подключение",
+		listenerEnabled: "Включить отдельный MCP listener",
+		bindAddress: "Слушать на этом адресе",
+		port: "Порт",
+		requireBearer: "Требовать bearer-токен",
+		localOnlyHint:
+			"Без bearer-токена listener доступен только на этом компьютере.",
+		httpWarning:
+			"Для доступа по LAN используется обычный HTTP. Другие устройства в сети могут перехватить токен и трафик. Используй этот режим только в доверенной частной сети и не настраивай проброс порта на роутере.",
+		listenerUrl: "MCP URL",
+		listenerStopped: "Listener отключён.",
+		listenerError:
+			"Не удалось открыть выбранный адрес или порт. Если возможно, включён безопасный резервный режим с bearer-токеном на localhost.",
+		listenerSave: "Сохранить настройки listener",
+		listenerSaveError: "Не удалось сохранить настройки listener.",
+		listenerUnsupported: "Обнови Host-плагин DSH, чтобы управлять listener.",
 		trust:
 			"DSH считает все аутентифицированные локальные API-процессы одним оператором с общими полномочиями. Новые токены получают доступ только к созданным ими сессиям.",
 		clientName: "Имя клиента",
@@ -103,11 +147,17 @@ function metadataResult(value: unknown): value is TokenMetadata[] {
 export function TokenSection({ remote, clipboard }: TokenSectionProps) {
 	const titleId = useId();
 	const [tokens, setTokens] = useState<TokenMetadata[]>([]);
+	const [listenerPreferences, setListenerPreferences] =
+		useState<ListenerPreferences | null>(null);
+	const [listenerStatus, setListenerStatus] = useState<ListenerStatus | null>(
+		null,
+	);
 	const [displayName, setDisplayName] = useState("");
 	const [scopes, setScopes] = useState<TokenScope[]>([]);
 	const [newToken, setNewToken] = useState<string | null>(null);
 	const [language, setLanguage] = useState<Language>(initialLanguage);
 	const [busy, setBusy] = useState(false);
+	const [listenerBusy, setListenerBusy] = useState(false);
 	const [copying, setCopying] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [notice, setNotice] = useState<string | null>(null);
@@ -132,6 +182,54 @@ export function TokenSection({ remote, clipboard }: TokenSectionProps) {
 			active = false;
 		};
 	}, [remote, t.loadingError]);
+
+	useEffect(() => {
+		let active = true;
+		const getPreferences = remote.getListenerPreferences;
+		const getStatus = remote.getListenerStatus;
+		if (!getPreferences || !getStatus) {
+			setError(t.listenerUnsupported);
+			return () => {
+				active = false;
+			};
+		}
+		void Promise.all([getPreferences.call(remote), getStatus.call(remote)])
+			.then(([preferences, status]) => {
+				if (!active) return;
+				if (preferences.ok) setListenerPreferences(preferences.value);
+				if (status.ok) setListenerStatus(status.value);
+			})
+			.catch(() => {
+				if (active) setError(t.listenerSaveError);
+			});
+		return () => {
+			active = false;
+		};
+	}, [remote, t.listenerSaveError, t.listenerUnsupported]);
+
+	async function saveListenerPreferences() {
+		if (!listenerPreferences || listenerBusy) return;
+		setListenerBusy(true);
+		setError(null);
+		try {
+			const setPreferences = remote.setListenerPreferences;
+			if (!setPreferences) {
+				setError(t.listenerUnsupported);
+				return;
+			}
+			const result = await setPreferences.call(remote, listenerPreferences);
+			if (!result.ok) {
+				setError(t.listenerSaveError);
+				return;
+			}
+			setListenerStatus(result.value);
+			setListenerPreferences(result.value.preferences);
+		} catch {
+			setError(t.listenerSaveError);
+		} finally {
+			setListenerBusy(false);
+		}
+	}
 
 	async function createToken() {
 		if (busy || newToken !== null) return;
@@ -219,6 +317,98 @@ export function TokenSection({ remote, clipboard }: TokenSectionProps) {
 			</div>
 			<h2 id={titleId}>{t.title}</h2>
 			<p>{t.trust}</p>
+
+			<h3>{t.listener}</h3>
+			{listenerPreferences && (
+				<fieldset disabled={listenerBusy}>
+					<label>
+						<input
+							checked={listenerPreferences.enabled}
+							onChange={(event) =>
+								setListenerPreferences({
+									...listenerPreferences,
+									enabled: event.target.checked,
+								})
+							}
+							type="checkbox"
+						/>
+						{t.listenerEnabled}
+					</label>
+					<label>
+						{t.bindAddress}
+						<select
+							value={listenerPreferences.host}
+							onChange={(event) =>
+								setListenerPreferences({
+									...listenerPreferences,
+									host: event.target.value,
+									requireBearer:
+										event.target.value === "127.0.0.1"
+											? listenerPreferences.requireBearer
+											: true,
+								})
+							}
+						>
+							{[
+								...new Set([
+									"127.0.0.1",
+									...(listenerStatus?.availableAddresses ?? []),
+									listenerPreferences.host,
+								]),
+							].map((address) => (
+								<option key={address} value={address}>
+									{address}
+								</option>
+							))}
+						</select>
+					</label>
+					<label>
+						{t.port}
+						<input
+							max={65535}
+							min={1024}
+							onChange={(event) =>
+								setListenerPreferences({
+									...listenerPreferences,
+									port: Number(event.target.value),
+								})
+							}
+							type="number"
+							value={listenerPreferences.port}
+						/>
+					</label>
+					<label>
+						<input
+							checked={listenerPreferences.requireBearer}
+							onChange={(event) =>
+								setListenerPreferences({
+									...listenerPreferences,
+									requireBearer: event.target.checked,
+									host: event.target.checked
+										? listenerPreferences.host
+										: "127.0.0.1",
+								})
+							}
+							type="checkbox"
+						/>
+						{t.requireBearer}
+					</label>
+					{!listenerPreferences.requireBearer && <p>{t.localOnlyHint}</p>}
+					{!listenerPreferences.host.startsWith("127.") && (
+						<p role="note">{t.httpWarning}</p>
+					)}
+					<button onClick={() => void saveListenerPreferences()} type="button">
+						{t.listenerSave}
+					</button>
+				</fieldset>
+			)}
+			{listenerStatus?.url && (
+				<p>
+					{t.listenerUrl}: <code>{listenerStatus.url}</code>
+				</p>
+			)}
+			{listenerStatus?.state === "disabled" && <p>{t.listenerStopped}</p>}
+			{listenerStatus?.error && <p role="alert">{t.listenerError}</p>}
 
 			<form
 				onSubmit={(event) => {
